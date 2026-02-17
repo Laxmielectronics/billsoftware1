@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <title>Simple Billing Software - Laxmi Electronics</title>
 
-<!-- PDF Library -->
+<!-- High Quality PDF Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
 <style>
 body{font-family:Arial;background:#f2f4f7;padding:20px}
@@ -25,44 +26,37 @@ th{background:#007bff;color:#fff}
 <div class="container">
 <h1>Laxmi Electronics</h1>
 
-<!-- ================= INVOICE INFO ================= -->
+<!-- INVOICE INFO -->
 <h3>
 Invoice No: <span id="invoiceNo"></span><br>
 Date & Time: <span id="dateTime"></span>
 </h3>
 
-
-<!-- ================= CUSTOMER ================= -->
+<!-- CUSTOMER -->
 <h3>Customer Details</h3>
-
 <input type="text" id="custName" placeholder="Customer Name">
 <input type="text" id="custMobile" placeholder="Mobile Number">
 
 
-<!-- ================= PRODUCT PANEL ================= -->
+<!-- PRODUCT PANEL -->
 <h3>Add Product (Stock)</h3>
-
 <input type="text" id="pName" placeholder="Product Name">
 <input type="number" id="pPrice" placeholder="Price">
 <input type="number" id="pStock" placeholder="Stock Qty">
 
 <button onclick="addProduct()">Add Product</button>
+<button onclick="clearProducts()">Clear Old Product List</button>
 
 <table id="productTable">
 <thead>
-<tr>
-<th>Name</th>
-<th>Price</th>
-<th>Stock</th>
-</tr>
+<tr><th>Name</th><th>Price</th><th>Stock</th></tr>
 </thead>
 <tbody></tbody>
 </table>
 
 
-<!-- ================= BILLING ================= -->
+<!-- BILLING -->
 <h3>Create Bill</h3>
-
 <select id="productList"></select>
 <input type="number" id="qty" placeholder="Qty">
 <button onclick="addItem()">Add Item</button>
@@ -85,10 +79,9 @@ Date & Time: <span id="dateTime"></span>
 
 </div>
 
-
 <script>
 
-// ================= AUTO INVOICE =================
+// AUTO INVOICE
 const invoiceNumber = 'INV' + Math.floor(10000 + Math.random()*90000);
 document.getElementById('invoiceNo').innerText = invoiceNumber;
 
@@ -96,29 +89,26 @@ const now = new Date();
 document.getElementById('dateTime').innerText = now.toLocaleString();
 
 
-// ================= STORAGE =================
+// STORAGE
 let products = JSON.parse(localStorage.getItem('products')) || [];
 let grandTotal = 0;
 let billItems = [];
 
 
-// ================= LOAD PRODUCTS =================
+// LOAD PRODUCTS
 function loadProducts(){
 
-const dropdown=document.getElementById('productList');
-const table=document.querySelector('#productTable tbody');
-
-dropdown.innerHTML='<option value="">Select Item</option>';
-table.innerHTML='';
+productList.innerHTML='<option value="">Select Item</option>';
+productTable.querySelector('tbody').innerHTML='';
 
 products.forEach((p,i)=>{
 
 const opt=document.createElement('option');
 opt.value=i;
 opt.textContent=`${p.name} ₹${p.price} | Stock:${p.stock}`;
-dropdown.appendChild(opt);
+productList.appendChild(opt);
 
-const row=table.insertRow();
+const row=productTable.querySelector('tbody').insertRow();
 row.insertCell(0).innerText=p.name;
 row.insertCell(1).innerText=p.price;
 row.insertCell(2).innerText=p.stock;
@@ -127,7 +117,7 @@ row.insertCell(2).innerText=p.stock;
 loadProducts();
 
 
-// ================= ADD PRODUCT =================
+// ADD PRODUCT
 function addProduct(){
 
 const name=pName.value.trim();
@@ -146,7 +136,18 @@ pName.value='';pPrice.value='';pStock.value='';
 }
 
 
-// ================= BILLING =================
+// CLEAR PRODUCT LIST
+function clearProducts(){
+
+if(confirm('Delete all old products?')){
+products=[];
+localStorage.removeItem('products');
+loadProducts();
+}
+}
+
+
+// BILLING
 function addItem(){
 
 const i=productList.value;
@@ -157,10 +158,7 @@ alert('Select item & qty');return;
 }
 
 const p=products[i];
-
-if(qty>p.stock){
-alert('Insufficient stock');return;
-}
+if(qty>p.stock){alert('Insufficient stock');return;}
 
 p.stock-=qty;
 localStorage.setItem('products',JSON.stringify(products));
@@ -175,68 +173,66 @@ row.insertCell(1).innerText=qty;
 row.insertCell(2).innerText=p.price;
 row.insertCell(3).innerText=total.toFixed(2);
 
-billItems.push({name:p.name,qty,price:p.price,total});
+billItems.push([p.name,qty,p.price,total.toFixed(2)]);
 
 document.getElementById('grandTotal').innerText=grandTotal.toFixed(2);
 }
 
 
-// ================= PDF INVOICE =================
+// HIGH QUALITY PDF
 function downloadPDF(){
 
-if(billItems.length===0){
-alert('No bill items');return;
-}
+if(billItems.length===0){alert('No bill items');return;}
 
 const custName=document.getElementById('custName').value || 'N/A';
 const custMobile=document.getElementById('custMobile').value || 'N/A';
 
 const { jsPDF } = window.jspdf;
-const doc = new jsPDF();
+const doc = new jsPDF({ unit:'mm', format:'a4' });
 
-let y=20;
+// Header
 
-// Logo placeholder box
-doc.rect(150,10,40,20);
-doc.text('LOGO',160,22);
-
-// Firm details
-doc.setFontSize(14);
-doc.text('Laxmi Electronics',20,15);
+doc.setFontSize(18);
+doc.text('LAXMI ELECTRONICS',14,18);
 
 doc.setFontSize(10);
-doc.text('Old Indira Colony, Opposite Rajesh Thakur Bunglow,',20,22);
-doc.text('Beside Laxmi Provision and Coldrinks',20,28);
+doc.text(
+'Old Indira Colony, Opposite Rajesh Thakur Bunglow, Beside Laxmi Provision and Coldrinks',
+14,24,{maxWidth:120}
+);
+
+doc.rect(160,10,30,20);
+doc.text('LOGO',168,22);
 
 // Invoice info
-doc.text(`Invoice No: ${invoiceNumber}`,20,38);
-doc.text(`Date: ${now.toLocaleString()}`,20,44);
+
+doc.text(`Invoice No: ${invoiceNumber}`,14,40);
+doc.text(`Date: ${now.toLocaleString()}`,14,46);
 
 // Customer
 
-doc.text(`Customer: ${custName}`,20,54);
-doc.text(`Mobile: ${custMobile}`,20,60);
+doc.text(`Customer: ${custName}`,14,56);
+doc.text(`Mobile: ${custMobile}`,14,62);
 
-// Items
+// Table
 
-y=70;
-billItems.forEach(item=>{
-doc.text(`${item.name} x${item.qty} = ₹${item.total}`,20,y);
-y+=10;
+doc.autoTable({
+startY:70,
+head:[['Item','Qty','Price','Total']],
+body:billItems,
+theme:'grid'
 });
 
-// Total
+const finalY = doc.lastAutoTable.finalY + 10;
 
-doc.text(`Grand Total: ₹${grandTotal.toFixed(2)}`,20,y+10);
-
-// Save
+doc.text(`Grand Total: ₹ ${grandTotal.toFixed(2)}`,140,finalY);
 
 doc.save(`Invoice_${invoiceNumber}.pdf`);
 }
 
 
-// ================= TESTS =================
-console.assert(typeof invoiceNumber==='string','Invoice error');
+// TESTS
+console.assert(Array.isArray(products),'Products error');
 console.assert(typeof grandTotal==='number','Total error');
 
 </script>
