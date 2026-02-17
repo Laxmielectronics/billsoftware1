@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Simple Billing Software - Laxmi Electronics</title>
+<title>Simple Billing Software</title>
 
 <!-- High Quality PDF Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -24,13 +24,20 @@ th{background:#007bff;color:#fff}
 <body>
 
 <div class="container">
-<h1>Laxmi Electronics</h1>
 
-<!-- INVOICE INFO -->
+<!-- ================= STORE DETAILS ================= -->
+<h2>Store Details</h2>
+
+<input type="text" id="storeName" placeholder="Store Name (e.g. Laxmi Electronics)">
+<input type="text" id="gstNo" placeholder="GST Number (Optional)">
+<input type="text" id="invoiceNoInput" placeholder="Invoice Number">
+
+
+<!-- DATE TIME -->
 <h3>
-Invoice No: <span id="invoiceNo"></span><br>
 Date & Time: <span id="dateTime"></span>
 </h3>
+
 
 <!-- CUSTOMER -->
 <h3>Customer Details</h3>
@@ -81,10 +88,7 @@ Date & Time: <span id="dateTime"></span>
 
 <script>
 
-// AUTO INVOICE
-const invoiceNumber = 'INV' + Math.floor(10000 + Math.random()*90000);
-document.getElementById('invoiceNo').innerText = invoiceNumber;
-
+// DATE TIME
 const now = new Date();
 document.getElementById('dateTime').innerText = now.toLocaleString();
 
@@ -136,9 +140,8 @@ pName.value='';pPrice.value='';pStock.value='';
 }
 
 
-// CLEAR PRODUCT LIST
+// CLEAR PRODUCTS
 function clearProducts(){
-
 if(confirm('Delete all old products?')){
 products=[];
 localStorage.removeItem('products');
@@ -184,16 +187,20 @@ function downloadPDF(){
 
 if(billItems.length===0){alert('No bill items');return;}
 
+const storeName=document.getElementById('storeName').value || 'Laxmi Electronics';
+const gstNo=document.getElementById('gstNo').value || '';
+const invoiceNo=document.getElementById('invoiceNoInput').value || 'N/A';
+
 const custName=document.getElementById('custName').value || 'N/A';
 const custMobile=document.getElementById('custMobile').value || 'N/A';
 
 const { jsPDF } = window.jspdf;
 const doc = new jsPDF({ unit:'mm', format:'a4' });
 
-// Header
+// HEADER
 
 doc.setFontSize(18);
-doc.text('LAXMI ELECTRONICS',14,18);
+doc.text(storeName.toUpperCase(),14,18);
 
 doc.setFontSize(10);
 doc.text(
@@ -201,20 +208,26 @@ doc.text(
 14,24,{maxWidth:120}
 );
 
+if(gstNo){
+doc.text(`GST No: ${gstNo}`,14,30);
+}
+
+// LOGO BOX
+
 doc.rect(160,10,30,20);
 doc.text('LOGO',168,22);
 
-// Invoice info
+// INVOICE INFO
 
-doc.text(`Invoice No: ${invoiceNumber}`,14,40);
+doc.text(`Invoice No: ${invoiceNo}`,14,40);
 doc.text(`Date: ${now.toLocaleString()}`,14,46);
 
-// Customer
+// CUSTOMER
 
 doc.text(`Customer: ${custName}`,14,56);
 doc.text(`Mobile: ${custMobile}`,14,62);
 
-// Table
+// TABLE
 
 doc.autoTable({
 startY:70,
@@ -227,7 +240,9 @@ const finalY = doc.lastAutoTable.finalY + 10;
 
 doc.text(`Grand Total: ₹ ${grandTotal.toFixed(2)}`,140,finalY);
 
-doc.save(`Invoice_${invoiceNumber}.pdf`);
+// SAVE
+
+doc.save(`Invoice_${invoiceNo}.pdf`);
 }
 
 
