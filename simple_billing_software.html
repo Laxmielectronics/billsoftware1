@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Laxmi Electronics Billing + Customer Database</title>
+<style>
+body{font-family:Arial;background:#f2f4f7;padding:20px}
+.container{max-width:1400px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+h1{text-align:center;margin-top:0}
+input,select,button{padding:8px;margin:5px;border-radius:6px;border:1px solid #ccc}
+button{background:#007bff;color:#fff;border:none;cursor:pointer}
+button:hover{background:#0056b3}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th,td{border:1px solid #ddd;padding:8px;text-align:center}
+th{background:#007bff;color:#fff}
+.flex{display:flex;gap:25px;flex-wrap:wrap}
+.panel{flex:1;min-width:420px}
+.total{font-size:18px;font-weight:bold;text-align:right;margin-top:10px}
+.login{max-width:300px;margin:auto;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginBox" class="login container">
+<h2>Admin Login</h2>
+<input type="password" id="loginPass" placeholder="Enter Password">
+<br>
+<button onclick="login()">Login</button>
+</div>
+
+
+<div id="mainApp" style="display:none">
+<div class="container">
+
+<h1>Laxmi Electronics</h1>
+
+<div class="flex">
+
+<!-- ================= BILLING ================= -->
+<div class="panel">
+<h3>Billing</h3>
+
+<input type="text" id="custName" placeholder="Customer Name">
+<input type="text" id="custMobile" placeholder="Mobile">
+
+<select id="productList"></select>
+<input type="number" id="qty" placeholder="Qty">
+<input type="number" id="discount" placeholder="Discount %">
+<button onclick="addItem()">Add Item</button>
+
+<table id="billTable">
+<thead>
+<tr>
+<th>Item</th>
+<th>Qty</th>
+<th>Price</th>
+<th>Discount</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+<div class="total">Grand Total ₹ <span id="grandTotal">0</span></div>
+
+<button onclick="completeBill()">Complete Bill</button>
+<button onclick="sendWhatsApp()">Send WhatsApp</button>
+
+</div>
+
+
+<!-- ================= CUSTOMER DATABASE ================= -->
+<div class="panel">
+<h3>Customer Database + Dues</h3>
+
+<table id="customerTable">
+<thead>
+<tr>
+<th>Name</th>
+<th>Mobile</th>
+<th>Total Purchase</th>
+<th>Paid</th>
+<th>Dues</th>
+<th>Pay</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+
+</div>
+
+</div>
+</div>
+</div>
+
+
+<script>
+
+// ================= LOGIN =================
+const ADMIN_PASS="1234";
+function login(){
+if(loginPass.value===ADMIN_PASS){
+loginBox.style.display='none';
+mainApp.style.display='block';
+}else alert('Wrong password');
+}
+
+
+// ================= STORAGE =================
+let products=JSON.parse(localStorage.getItem('products'))||[
+{name:'TV',price:25000,stock:10},
+{name:'Fridge',price:18000,stock:5}
+];
+
+let customers=JSON.parse(localStorage.getItem('customers'))||[];
+
+let grandTotal=0;
+let billData=[];
+
+
+// ================= LOAD PRODUCTS =================
+function loadProducts(){
+productList.innerHTML='<option value="">Select Item</option>';
+products.forEach((p,i)=>{
+const opt=document.createElement('option');
+opt.value=i;
+opt.textContent=`${p.name} ₹${p.price} | Stock:${p.stock}`;
+productList.appendChild(opt);
+});
+}
+loadProducts();
+
+
+// ================= BILLING =================
+function addItem(){
+
+const i=productList.value;
+const qty=parseFloat(document.getElementById('qty').value);
+const disc=parseFloat(document.getElementById('discount').value)||0;
+
+if(i===''||isNaN(qty)) return alert('Select item & qty');
+
+const p=products[i];
+if(qty>p.stock) return alert('Insufficient stock');
+
+p.stock-=qty;
+localStorage.setItem('products',JSON.stringify(products));
+loadProducts();
+
+let total=qty*p.price;
+total-=total*(disc/100);
+
+grandTotal+=total;
+
+const row=billTable.querySelector('tbody').insertRow();
+row.insertCell(0).innerText=p.name;
+row.insertCell(1).innerText=qty;
+row.insertCell(2).innerText=p.price;
+row.insertCell(3).innerText=disc;
+row.insertCell(4).innerText=total.toFixed(2);
+
+billData.push(total);
+
+document.getElementById('grandTotal').innerText=grandTotal.toFixed(2);
+}
+
+
+// ================= COMPLETE BILL =================
+function completeBill(){
+
+const name=custName.value.trim();
+const mobile=custMobile.value.trim();
+
+if(!name||!mobile) return alert('Enter customer details');
+
+let cust=customers.find(c=>c.mobile===mobile);
+
+if(!cust){
+cust={name,mobile,total:0,paid:0};
+customers.push(cust);
+}
+
+cust.total+=grandTotal;
+
+localStorage.setItem('customers',JSON.stringify(customers));
+
+alert('Bill Saved to Customer Account');
+
+billTable.querySelector('tbody').innerHTML='';
+grandTotal=0;
+document.getElementById('grandTotal').innerText='0';
+
+loadCustomers();
+}
+
+
+// ================= CUSTOMER TABLE =================
+function loadCustomers(){
+
+const tbody=document.querySelector('#customerTable tbody');
+tbody.innerHTML='';
+
+customers.forEach((c,i)=>{
+
+const dues=c.total-c.paid;
+
+const row=tbody.insertRow();
+row.insertCell(0).innerText=c.name;
+row.insertCell(1).innerText=c.mobile;
+row.insertCell(2).innerText=c.total.toFixed(2);
+row.insertCell(3).innerText=c.paid.toFixed(2);
+row.insertCell(4).innerText=dues.toFixed(2);
+
+row.insertCell(5).innerHTML=`<button onclick="payDue(${i})">Pay</button>`;
+});
+}
+loadCustomers();
+
+
+// ================= PAY DUES =================
+function payDue(i){
+
+const amt=parseFloat(prompt('Enter payment amount'));
+if(isNaN(amt)) return;
+
+customers[i].paid+=amt;
+localStorage.setItem('customers',JSON.stringify(customers));
+loadCustomers();
+}
+
+
+// ================= WHATSAPP =================
+function sendWhatsApp(){
+
+let msg='Laxmi Electronics Bill%0A';
+msg+=`Total ₹${grandTotal.toFixed(2)}`;
+
+window.open(`https://wa.me/?text=${msg}`);
+}
+
+
+// ================= TESTS =================
+console.assert(Array.isArray(customers),'Customer DB error');
+console.assert(typeof grandTotal==='number','Total error');
+
+</script>
+</body>
+</html>
