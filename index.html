@@ -12,8 +12,8 @@
 body{font-family:Arial;background:#f2f4f7;padding:20px}
 .container{max-width:1000px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
 h1{text-align:center;margin-top:0}
-input,select,button{padding:8px;margin:5px;border-radius:6px;border:1px solid #ccc}
-button{background:#007bff;color:#fff;border:none;cursor:pointer}
+input,textarea,select,button{padding:8px;margin:5px;border-radius:6px;border:1px solid #ccc;width:100%;max-width:350px}
+button{background:#007bff;color:#fff;border:none;cursor:pointer;width:auto}
 button:hover{background:#0056b3}
 table{width:100%;border-collapse:collapse;margin-top:15px}
 th,td{border:1px solid #ddd;padding:8px;text-align:center}
@@ -29,7 +29,13 @@ th{background:#007bff;color:#fff}
 <h2>Store Details</h2>
 
 <input type="text" id="storeName" placeholder="Store Name (e.g. Laxmi Electronics)">
+
+<textarea id="storeAddress" rows="3" placeholder="Shop Address"></textarea>
+
+<input type="text" id="storeContact" placeholder="Shop Contact Number">
+
 <input type="text" id="gstNo" placeholder="GST Number (Optional)">
+
 <input type="text" id="invoiceNoInput" placeholder="Invoice Number">
 
 
@@ -187,7 +193,9 @@ function downloadPDF(){
 
 if(billItems.length===0){alert('No bill items');return;}
 
-const storeName=document.getElementById('storeName').value || 'Laxmi Electronics';
+const storeName=document.getElementById('storeName').value || 'Store Name';
+const storeAddress=document.getElementById('storeAddress').value || '';
+const storeContact=document.getElementById('storeContact').value || '';
 const gstNo=document.getElementById('gstNo').value || '';
 const invoiceNo=document.getElementById('invoiceNoInput').value || 'N/A';
 
@@ -203,13 +211,19 @@ doc.setFontSize(18);
 doc.text(storeName.toUpperCase(),14,18);
 
 doc.setFontSize(10);
-doc.text(
-'Old Indira Colony, Opposite Rajesh Thakur Bunglow, Beside Laxmi Provision and Coldrinks',
-14,24,{maxWidth:120}
-);
+if(storeAddress){
+doc.text(storeAddress,14,24,{maxWidth:120});
+}
+
+let infoY = 30;
+
+if(storeContact){
+doc.text(`Contact: ${storeContact}`,14,infoY);
+infoY+=6;
+}
 
 if(gstNo){
-doc.text(`GST No: ${gstNo}`,14,30);
+doc.text(`GST No: ${gstNo}`,14,infoY);
 }
 
 // LOGO BOX
@@ -219,18 +233,18 @@ doc.text('LOGO',168,22);
 
 // INVOICE INFO
 
-doc.text(`Invoice No: ${invoiceNo}`,14,40);
-doc.text(`Date: ${now.toLocaleString()}`,14,46);
+doc.text(`Invoice No: ${invoiceNo}`,14,42);
+doc.text(`Date: ${now.toLocaleString()}`,14,48);
 
 // CUSTOMER
 
-doc.text(`Customer: ${custName}`,14,56);
-doc.text(`Mobile: ${custMobile}`,14,62);
+doc.text(`Customer: ${custName}`,14,58);
+doc.text(`Mobile: ${custMobile}`,14,64);
 
 // TABLE
 
 doc.autoTable({
-startY:70,
+startY:72,
 head:[['Item','Qty','Price','Total']],
 body:billItems,
 theme:'grid'
