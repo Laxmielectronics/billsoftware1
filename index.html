@@ -2,280 +2,190 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Simple Billing Software</title>
+<title>GST Invoice Billing Software</title>
 
-<!-- High Quality PDF Library -->
+<!-- PDF LIBRARIES -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
 <style>
 body{font-family:Arial;background:#f2f4f7;padding:20px}
-.container{max-width:1000px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
-h1{text-align:center;margin-top:0}
+.container{max-width:1100px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
 input,textarea,select,button{padding:8px;margin:5px;border-radius:6px;border:1px solid #ccc;width:100%;max-width:350px}
 button{background:#007bff;color:#fff;border:none;cursor:pointer;width:auto}
-button:hover{background:#0056b3}
 table{width:100%;border-collapse:collapse;margin-top:15px}
 th,td{border:1px solid #ddd;padding:8px;text-align:center}
 th{background:#007bff;color:#fff}
-.total{font-size:18px;font-weight:bold;text-align:right;margin-top:10px}
-.taxbox{display:flex;gap:10px;flex-wrap:wrap}
-.datebox{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.total{font-size:16px;font-weight:bold;text-align:right;margin-top:6px}
 </style>
 </head>
 <body>
 
 <div class="container">
+<h2>GST Invoice Billing</h2>
 
-<!-- STORE DETAILS -->
-<h2>Store Details</h2>
-<input type="text" id="storeName" placeholder="Store Name">
-<textarea id="storeAddress" rows="2" placeholder="Shop Address"></textarea>
-<input type="text" id="storeContact" placeholder="Shop Contact">
-<input type="text" id="gstNo" placeholder="GST Number">
-<input type="text" id="invoiceNoInput" placeholder="Invoice Number">
-
-
-<!-- DATE OPTIONS -->
-<h3>Bill Date</h3>
-<div class="datebox">
-<label><input type="radio" name="dateOption" value="current" checked onchange="setCurrentDate()"> Current Date</label>
-<label><input type="radio" name="dateOption" value="custom" onchange="enableCustomDate()"> Change Date</label>
-<input type="datetime-local" id="customDate" disabled>
-</div>
-
-<h3>Date & Time: <span id="dateTime"></span></h3>
+<!-- ================= SELLER ================= -->
+<h3>Seller Details</h3>
+<input type="text" id="sellerName" placeholder="Store Name">
+<textarea id="sellerAddress" placeholder="Store Address"></textarea>
+<input type="text" id="sellerGST" placeholder="GSTIN">
+<input type="text" id="sellerState" placeholder="State Name & Code">
 
 
-<!-- CUSTOMER -->
-<h3>Customer Details</h3>
-<input type="text" id="custName" placeholder="Customer Name">
-<input type="text" id="custMobile" placeholder="Mobile Number">
+<!-- ================= BUYER ================= -->
+<h3>Buyer Details</h3>
+<input type="text" id="buyerName" placeholder="Buyer Name">
+<textarea id="buyerAddress" placeholder="Buyer Address"></textarea>
+<input type="text" id="buyerGST" placeholder="Buyer GSTIN">
+<input type="text" id="buyerState" placeholder="State Name & Code">
 
 
-<!-- PRODUCT PANEL -->
+<!-- ================= INVOICE ================= -->
+<h3>Invoice Info</h3>
+<input type="text" id="invoiceNo" placeholder="Invoice Number (Optional)">
+<input type="date" id="invoiceDate">
+
+
+<!-- ================= PRODUCT ================= -->
 <h3>Add Product</h3>
-<input type="text" id="pName" placeholder="Product Name">
-<input type="number" id="pPrice" placeholder="Price">
-<input type="number" id="pStock" placeholder="Stock Qty">
-<button onclick="addProduct()">Add Product</button>
-<button onclick="clearProducts()">Clear Old Product List</button>
+<input type="text" id="itemName" placeholder="Item Name">
+<input type="text" id="hsn" placeholder="HSN / SAC Code">
+<input type="number" id="qty" placeholder="Quantity">
+<input type="number" id="rate" placeholder="Rate">
+<input type="number" id="gstPercent" placeholder="GST %">
 
-<table id="productTable">
-<thead><tr><th>Name</th><th>Price</th><th>Stock</th></tr></thead>
-<tbody></tbody>
-</table>
-
-
-<!-- BILLING -->
-<h3>Create Bill</h3>
-<select id="productList"></select>
-<input type="number" id="qtyInput" placeholder="Qty">
 <button onclick="addItem()">Add Item</button>
 
 <table id="billTable">
 <thead>
 <tr>
-<th>Item</th>
+<th>Description</th>
+<th>HSN</th>
 <th>Qty</th>
-<th>Price</th>
-<th>Total</th>
+<th>Rate</th>
+<th>GST %</th>
+<th>Amount</th>
 </tr>
 </thead>
 <tbody></tbody>
 </table>
 
+<div class="total">Taxable Value ₹ <span id="taxable">0</span></div>
+<div class="total">CGST ₹ <span id="cgst">0</span></div>
+<div class="total">SGST ₹ <span id="sgst">0</span></div>
+<div class="total">IGST ₹ <span id="igst">0</span></div>
+<div class="total">Grand Total ₹ <span id="grand">0</span></div>
 
-<!-- TAX -->
-<h3>GST / TAX</h3>
-<div class="taxbox">
-<input type="number" id="igst" placeholder="IGST %">
-<input type="number" id="cgst" placeholder="CGST %">
-<input type="number" id="sgst" placeholder="SGST %">
-</div>
-
-<div class="total">Sub Total ₹ <span id="subTotal">0</span></div>
-<div class="total">Total Tax ₹ <span id="taxTotal">0</span></div>
-<div class="total">Grand Total ₹ <span id="grandTotal">0</span></div>
-
-<button onclick="downloadPDF()">Download Invoice PDF</button>
+<button onclick="downloadPDF()">Download GST Invoice PDF</button>
 
 </div>
 
 <script>
 
-// ================= DATE SYSTEM =================
+let items=[];
+let taxable=0, cgst=0, sgst=0, igst=0, grand=0;
 
-function setCurrentDate(){
-  document.getElementById('customDate').disabled=true;
-  updateDateDisplay(new Date());
-}
-
-function enableCustomDate(){
-  document.getElementById('customDate').disabled=false;
-}
-
-function updateDateDisplay(date){
-  document.getElementById('dateTime').innerText=date.toLocaleString();
-}
-
-// Default current date
-let billDate=new Date();
-updateDateDisplay(billDate);
-
-// When custom date changes
-
-document.getElementById('customDate').addEventListener('change',function(){
-  if(this.value){
-    billDate=new Date(this.value);
-    updateDateDisplay(billDate);
-  }
-});
-
-
-// ================= STORAGE =================
-let products=JSON.parse(localStorage.getItem('products'))||[];
-let subTotal=0;
-let grandTotal=0;
-let billItems=[];
-
-
-// LOAD PRODUCTS
-function loadProducts(){
-productList.innerHTML='<option value="">Select Item</option>';
-productTable.querySelector('tbody').innerHTML='';
-
-products.forEach((p,i)=>{
-const opt=document.createElement('option');
-opt.value=i;
-opt.textContent=`${p.name} ₹${p.price} | Stock:${p.stock}`;
-productList.appendChild(opt);
-
-const row=productTable.querySelector('tbody').insertRow();
-row.insertCell(0).innerText=p.name;
-row.insertCell(1).innerText=p.price;
-row.insertCell(2).innerText=p.stock;
-});
-}
-loadProducts();
-
-
-// ADD PRODUCT
-function addProduct(){
-const name=pName.value.trim();
-const price=parseFloat(pPrice.value);
-const stock=parseFloat(pStock.value);
-if(!name||isNaN(price)||isNaN(stock)) return alert('Fill fields');
-products.push({name,price,stock});
-localStorage.setItem('products',JSON.stringify(products));
-loadProducts();
-}
-
-
-// CLEAR PRODUCTS
-function clearProducts(){
-if(confirm('Delete all products?')){
-products=[];
-localStorage.removeItem('products');
-loadProducts();
-}
-}
-
-
-// BILLING
 function addItem(){
 
-const i=productList.value;
-const qty=parseFloat(qtyInput.value);
+const name=itemName.value;
+const hsnCode=hsn.value;
+const quantity=parseFloat(qty.value);
+const price=parseFloat(rate.value);
+const gstP=parseFloat(gstPercent.value)||0;
 
-if(i===''||isNaN(qty)) return alert('Select item & qty');
+if(!name||isNaN(quantity)||isNaN(price)) return alert('Fill item');
 
-const p=products[i];
-if(qty>p.stock) return alert('Insufficient stock');
+let base=quantity*price;
+let gstAmt=base*gstP/100;
 
-p.stock-=qty;
-localStorage.setItem('products',JSON.stringify(products));
-loadProducts();
+// Split GST
+let cg=gstAmt/2;
+let sg=gstAmt/2;
 
-let total=qty*p.price;
-subTotal+=total;
+items.push([name,hsnCode,quantity,price,gstP+'%',(base+gstAmt).toFixed(2)]);
 
 const row=billTable.querySelector('tbody').insertRow();
-row.insertCell(0).innerText=p.name;
-row.insertCell(1).innerText=qty;
-row.insertCell(2).innerText=p.price;
-row.insertCell(3).innerText=total.toFixed(2);
+row.insertCell(0).innerText=name;
+row.insertCell(1).innerText=hsnCode;
+row.insertCell(2).innerText=quantity;
+row.insertCell(3).innerText=price;
+row.insertCell(4).innerText=gstP+'%';
+row.insertCell(5).innerText=(base+gstAmt).toFixed(2);
 
-billItems.push([p.name,qty,p.price,total.toFixed(2)]);
+// Totals
 
-calculateTax();
+taxable+=base;
+cgst+=cg;
+sgst+=sg;
+
+grand=taxable+cgst+sgst+igst;
+
+updateTotals();
+}
+
+function updateTotals(){
+
+document.getElementById('taxable').innerText=taxable.toFixed(2);
+document.getElementById('cgst').innerText=cgst.toFixed(2);
+document.getElementById('sgst').innerText=sgst.toFixed(2);
+document.getElementById('igst').innerText=igst.toFixed(2);
+document.getElementById('grand').innerText=grand.toFixed(2);
 }
 
 
-// TAX
-function calculateTax(){
-const igst=parseFloat(document.getElementById('igst').value)||0;
-const cgst=parseFloat(document.getElementById('cgst').value)||0;
-const sgst=parseFloat(document.getElementById('sgst').value)||0;
-
-const taxAmount=subTotal*(igst+cgst+sgst)/100;
-
-grandTotal=subTotal+taxAmount;
-
-document.getElementById('subTotal').innerText=subTotal.toFixed(2);
-document.getElementById('taxTotal').innerText=taxAmount.toFixed(2);
-document.getElementById('grandTotal').innerText=grandTotal.toFixed(2);
-}
-
-
-// PDF
 function downloadPDF(){
 
-const storeName=document.getElementById('storeName').value||'Store';
-const address=document.getElementById('storeAddress').value||'';
-const contact=document.getElementById('storeContact').value||'';
-const gst=document.getElementById('gstNo').value||'';
-const invoice=document.getElementById('invoiceNoInput').value||'N/A';
-
-const cust=document.getElementById('custName').value||'N/A';
-const mobile=document.getElementById('custMobile').value||'N/A';
-
 const { jsPDF } = window.jspdf;
-const doc=new jsPDF();
+const doc=new jsPDF({unit:'mm',format:'a4'});
 
-// HEADER
+// Seller
 
-doc.setFontSize(16);
-doc.text(storeName,14,15);
-doc.setFontSize(10);
-doc.text(address,14,22,{maxWidth:120});
-doc.text(`Contact: ${contact}`,14,28);
-doc.text(`GST: ${gst}`,14,34);
+doc.setFontSize(12);
+doc.text(sellerName.value||'',14,15);
+doc.text(sellerAddress.value||'',14,21,{maxWidth:90});
+doc.text('GSTIN: '+(sellerGST.value||''),14,30);
+doc.text('State: '+(sellerState.value||''),14,36);
 
-doc.text(`Invoice: ${invoice}`,14,42);
-doc.text(`Date: ${billDate.toLocaleString()}`,14,48);
+// Buyer
 
-doc.text(`Customer: ${cust}`,14,56);
-doc.text(`Mobile: ${mobile}`,14,62);
+doc.text('Bill To:',110,15);
+doc.text(buyerName.value||'',110,21);
+doc.text(buyerAddress.value||'',110,27,{maxWidth:80});
+doc.text('GSTIN: '+(buyerGST.value||''),110,36);
+doc.text('State: '+(buyerState.value||''),110,42);
 
-// TABLE
+// Invoice Box
+
+doc.rect(150,50,50,20);
+doc.text('Invoice No: '+(invoiceNo.value||'N/A'),152,58);
+doc.text('Date: '+(invoiceDate.value||''),152,66);
+
+// Table
 
 doc.autoTable({
-startY:70,
-head:[['Item','Qty','Price','Total']],
-body:billItems
+startY:80,
+head:[['Description','HSN','Qty','Rate','GST %','Amount']],
+body:items
 });
 
 let y=doc.lastAutoTable.finalY+10;
 
-doc.text(`Grand Total: ₹ ${grandTotal.toFixed(2)}`,140,y);
+doc.text('Taxable Value: ₹ '+taxable.toFixed(2),130,y);
+y+=6;
+doc.text('CGST: ₹ '+cgst.toFixed(2),130,y);
+y+=6;
+doc.text('SGST: ₹ '+sgst.toFixed(2),130,y);
+y+=6;
+doc.text('IGST: ₹ '+igst.toFixed(2),130,y);
+y+=6;
+doc.text('Grand Total: ₹ '+grand.toFixed(2),130,y);
 
-doc.save(`Invoice_${invoice}.pdf`);
+// Footer
+
+doc.text('This is a Computer Generated GST Invoice',14,285);
+
+doc.save('GST_Invoice.pdf');
 }
-
-
-// TEST
-console.assert(Array.isArray(products),'Products error');
 
 </script>
 </body>
