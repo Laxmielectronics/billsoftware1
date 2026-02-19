@@ -20,6 +20,7 @@ th,td{border:1px solid #ddd;padding:8px;text-align:center}
 th{background:#007bff;color:#fff}
 .total{font-size:18px;font-weight:bold;text-align:right;margin-top:10px}
 .taxbox{display:flex;gap:10px;flex-wrap:wrap}
+.datebox{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 </style>
 </head>
 <body>
@@ -33,6 +34,15 @@ th{background:#007bff;color:#fff}
 <input type="text" id="storeContact" placeholder="Shop Contact">
 <input type="text" id="gstNo" placeholder="GST Number">
 <input type="text" id="invoiceNoInput" placeholder="Invoice Number">
+
+
+<!-- DATE OPTIONS -->
+<h3>Bill Date</h3>
+<div class="datebox">
+<label><input type="radio" name="dateOption" value="current" checked onchange="setCurrentDate()"> Current Date</label>
+<label><input type="radio" name="dateOption" value="custom" onchange="enableCustomDate()"> Change Date</label>
+<input type="datetime-local" id="customDate" disabled>
+</div>
 
 <h3>Date & Time: <span id="dateTime"></span></h3>
 
@@ -60,7 +70,7 @@ th{background:#007bff;color:#fff}
 <!-- BILLING -->
 <h3>Create Bill</h3>
 <select id="productList"></select>
-<input type="number" id="qty" placeholder="Qty">
+<input type="number" id="qtyInput" placeholder="Qty">
 <button onclick="addItem()">Add Item</button>
 
 <table id="billTable">
@@ -76,7 +86,7 @@ th{background:#007bff;color:#fff}
 </table>
 
 
-<!-- TAX INPUTS -->
+<!-- TAX -->
 <h3>GST / TAX</h3>
 <div class="taxbox">
 <input type="number" id="igst" placeholder="IGST %">
@@ -94,12 +104,36 @@ th{background:#007bff;color:#fff}
 
 <script>
 
-// DATE
-const now=new Date();
-document.getElementById('dateTime').innerText=now.toLocaleString();
+// ================= DATE SYSTEM =================
+
+function setCurrentDate(){
+  document.getElementById('customDate').disabled=true;
+  updateDateDisplay(new Date());
+}
+
+function enableCustomDate(){
+  document.getElementById('customDate').disabled=false;
+}
+
+function updateDateDisplay(date){
+  document.getElementById('dateTime').innerText=date.toLocaleString();
+}
+
+// Default current date
+let billDate=new Date();
+updateDateDisplay(billDate);
+
+// When custom date changes
+
+document.getElementById('customDate').addEventListener('change',function(){
+  if(this.value){
+    billDate=new Date(this.value);
+    updateDateDisplay(billDate);
+  }
+});
 
 
-// STORAGE
+// ================= STORAGE =================
 let products=JSON.parse(localStorage.getItem('products'))||[];
 let subTotal=0;
 let grandTotal=0;
@@ -178,9 +212,8 @@ calculateTax();
 }
 
 
-// TAX CALCULATION
+// TAX
 function calculateTax(){
-
 const igst=parseFloat(document.getElementById('igst').value)||0;
 const cgst=parseFloat(document.getElementById('cgst').value)||0;
 const sgst=parseFloat(document.getElementById('sgst').value)||0;
@@ -198,18 +231,14 @@ document.getElementById('grandTotal').innerText=grandTotal.toFixed(2);
 // PDF
 function downloadPDF(){
 
-const storeName=storeNameInput.value||'Store';
-const address=storeAddress.value||'';
-const contact=storeContact.value||'';
-const gst=gstNo.value||'';
-const invoice=invoiceNoInput.value||'N/A';
+const storeName=document.getElementById('storeName').value||'Store';
+const address=document.getElementById('storeAddress').value||'';
+const contact=document.getElementById('storeContact').value||'';
+const gst=document.getElementById('gstNo').value||'';
+const invoice=document.getElementById('invoiceNoInput').value||'N/A';
 
-const cust=custName.value||'N/A';
-const mobile=custMobile.value||'N/A';
-
-const igst=parseFloat(document.getElementById('igst').value)||0;
-const cgst=parseFloat(document.getElementById('cgst').value)||0;
-const sgst=parseFloat(document.getElementById('sgst').value)||0;
+const cust=document.getElementById('custName').value||'N/A';
+const mobile=document.getElementById('custMobile').value||'N/A';
 
 const { jsPDF } = window.jspdf;
 const doc=new jsPDF();
@@ -224,7 +253,7 @@ doc.text(`Contact: ${contact}`,14,28);
 doc.text(`GST: ${gst}`,14,34);
 
 doc.text(`Invoice: ${invoice}`,14,42);
-doc.text(`Date: ${now.toLocaleString()}`,14,48);
+doc.text(`Date: ${billDate.toLocaleString()}`,14,48);
 
 doc.text(`Customer: ${cust}`,14,56);
 doc.text(`Mobile: ${mobile}`,14,62);
@@ -239,20 +268,13 @@ body:billItems
 
 let y=doc.lastAutoTable.finalY+10;
 
-doc.text(`Sub Total: ₹ ${subTotal.toFixed(2)}`,140,y);
-y+=6;
-
-if(igst) { doc.text(`IGST (${igst}%): Included`,140,y); y+=6; }
-if(cgst) { doc.text(`CGST (${cgst}%): Included`,140,y); y+=6; }
-if(sgst) { doc.text(`SGST (${sgst}%): Included`,140,y); y+=6; }
-
-doc.text(`Grand Total: ₹ ${grandTotal.toFixed(2)}`,140,y+4);
+doc.text(`Grand Total: ₹ ${grandTotal.toFixed(2)}`,140,y);
 
 doc.save(`Invoice_${invoice}.pdf`);
 }
 
 
-// TESTS
+// TEST
 console.assert(Array.isArray(products),'Products error');
 
 </script>
