@@ -19,30 +19,22 @@ table{width:100%;border-collapse:collapse;margin-top:15px}
 th,td{border:1px solid #ddd;padding:8px;text-align:center}
 th{background:#007bff;color:#fff}
 .total{font-size:18px;font-weight:bold;text-align:right;margin-top:10px}
+.taxbox{display:flex;gap:10px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 
 <div class="container">
 
-<!-- ================= STORE DETAILS ================= -->
+<!-- STORE DETAILS -->
 <h2>Store Details</h2>
-
-<input type="text" id="storeName" placeholder="Store Name (e.g. Laxmi Electronics)">
-
-<textarea id="storeAddress" rows="3" placeholder="Shop Address"></textarea>
-
-<input type="text" id="storeContact" placeholder="Shop Contact Number">
-
-<input type="text" id="gstNo" placeholder="GST Number (Optional)">
-
+<input type="text" id="storeName" placeholder="Store Name">
+<textarea id="storeAddress" rows="2" placeholder="Shop Address"></textarea>
+<input type="text" id="storeContact" placeholder="Shop Contact">
+<input type="text" id="gstNo" placeholder="GST Number">
 <input type="text" id="invoiceNoInput" placeholder="Invoice Number">
 
-
-<!-- DATE TIME -->
-<h3>
-Date & Time: <span id="dateTime"></span>
-</h3>
+<h3>Date & Time: <span id="dateTime"></span></h3>
 
 
 <!-- CUSTOMER -->
@@ -52,18 +44,15 @@ Date & Time: <span id="dateTime"></span>
 
 
 <!-- PRODUCT PANEL -->
-<h3>Add Product (Stock)</h3>
+<h3>Add Product</h3>
 <input type="text" id="pName" placeholder="Product Name">
 <input type="number" id="pPrice" placeholder="Price">
 <input type="number" id="pStock" placeholder="Stock Qty">
-
 <button onclick="addProduct()">Add Product</button>
 <button onclick="clearProducts()">Clear Old Product List</button>
 
 <table id="productTable">
-<thead>
-<tr><th>Name</th><th>Price</th><th>Stock</th></tr>
-</thead>
+<thead><tr><th>Name</th><th>Price</th><th>Stock</th></tr></thead>
 <tbody></tbody>
 </table>
 
@@ -86,6 +75,17 @@ Date & Time: <span id="dateTime"></span>
 <tbody></tbody>
 </table>
 
+
+<!-- TAX INPUTS -->
+<h3>GST / TAX</h3>
+<div class="taxbox">
+<input type="number" id="igst" placeholder="IGST %">
+<input type="number" id="cgst" placeholder="CGST %">
+<input type="number" id="sgst" placeholder="SGST %">
+</div>
+
+<div class="total">Sub Total ₹ <span id="subTotal">0</span></div>
+<div class="total">Total Tax ₹ <span id="taxTotal">0</span></div>
 <div class="total">Grand Total ₹ <span id="grandTotal">0</span></div>
 
 <button onclick="downloadPDF()">Download Invoice PDF</button>
@@ -94,25 +94,24 @@ Date & Time: <span id="dateTime"></span>
 
 <script>
 
-// DATE TIME
-const now = new Date();
-document.getElementById('dateTime').innerText = now.toLocaleString();
+// DATE
+const now=new Date();
+document.getElementById('dateTime').innerText=now.toLocaleString();
 
 
 // STORAGE
-let products = JSON.parse(localStorage.getItem('products')) || [];
-let grandTotal = 0;
-let billItems = [];
+let products=JSON.parse(localStorage.getItem('products'))||[];
+let subTotal=0;
+let grandTotal=0;
+let billItems=[];
 
 
 // LOAD PRODUCTS
 function loadProducts(){
-
 productList.innerHTML='<option value="">Select Item</option>';
 productTable.querySelector('tbody').innerHTML='';
 
 products.forEach((p,i)=>{
-
 const opt=document.createElement('option');
 opt.value=i;
 opt.textContent=`${p.name} ₹${p.price} | Stock:${p.stock}`;
@@ -129,26 +128,19 @@ loadProducts();
 
 // ADD PRODUCT
 function addProduct(){
-
 const name=pName.value.trim();
 const price=parseFloat(pPrice.value);
 const stock=parseFloat(pStock.value);
-
-if(!name||isNaN(price)||isNaN(stock)){
-alert('Fill all fields');return;
-}
-
+if(!name||isNaN(price)||isNaN(stock)) return alert('Fill fields');
 products.push({name,price,stock});
 localStorage.setItem('products',JSON.stringify(products));
 loadProducts();
-
-pName.value='';pPrice.value='';pStock.value='';
 }
 
 
 // CLEAR PRODUCTS
 function clearProducts(){
-if(confirm('Delete all old products?')){
+if(confirm('Delete all products?')){
 products=[];
 localStorage.removeItem('products');
 loadProducts();
@@ -160,21 +152,19 @@ loadProducts();
 function addItem(){
 
 const i=productList.value;
-const qty=parseFloat(document.getElementById('qty').value);
+const qty=parseFloat(qtyInput.value);
 
-if(i===''||isNaN(qty)){
-alert('Select item & qty');return;
-}
+if(i===''||isNaN(qty)) return alert('Select item & qty');
 
 const p=products[i];
-if(qty>p.stock){alert('Insufficient stock');return;}
+if(qty>p.stock) return alert('Insufficient stock');
 
 p.stock-=qty;
 localStorage.setItem('products',JSON.stringify(products));
 loadProducts();
 
 let total=qty*p.price;
-grandTotal+=total;
+subTotal+=total;
 
 const row=billTable.querySelector('tbody').insertRow();
 row.insertCell(0).innerText=p.name;
@@ -184,85 +174,86 @@ row.insertCell(3).innerText=total.toFixed(2);
 
 billItems.push([p.name,qty,p.price,total.toFixed(2)]);
 
+calculateTax();
+}
+
+
+// TAX CALCULATION
+function calculateTax(){
+
+const igst=parseFloat(document.getElementById('igst').value)||0;
+const cgst=parseFloat(document.getElementById('cgst').value)||0;
+const sgst=parseFloat(document.getElementById('sgst').value)||0;
+
+const taxAmount=subTotal*(igst+cgst+sgst)/100;
+
+grandTotal=subTotal+taxAmount;
+
+document.getElementById('subTotal').innerText=subTotal.toFixed(2);
+document.getElementById('taxTotal').innerText=taxAmount.toFixed(2);
 document.getElementById('grandTotal').innerText=grandTotal.toFixed(2);
 }
 
 
-// HIGH QUALITY PDF
+// PDF
 function downloadPDF(){
 
-if(billItems.length===0){alert('No bill items');return;}
+const storeName=storeNameInput.value||'Store';
+const address=storeAddress.value||'';
+const contact=storeContact.value||'';
+const gst=gstNo.value||'';
+const invoice=invoiceNoInput.value||'N/A';
 
-const storeName=document.getElementById('storeName').value || 'Store Name';
-const storeAddress=document.getElementById('storeAddress').value || '';
-const storeContact=document.getElementById('storeContact').value || '';
-const gstNo=document.getElementById('gstNo').value || '';
-const invoiceNo=document.getElementById('invoiceNoInput').value || 'N/A';
+const cust=custName.value||'N/A';
+const mobile=custMobile.value||'N/A';
 
-const custName=document.getElementById('custName').value || 'N/A';
-const custMobile=document.getElementById('custMobile').value || 'N/A';
+const igst=parseFloat(document.getElementById('igst').value)||0;
+const cgst=parseFloat(document.getElementById('cgst').value)||0;
+const sgst=parseFloat(document.getElementById('sgst').value)||0;
 
 const { jsPDF } = window.jspdf;
-const doc = new jsPDF({ unit:'mm', format:'a4' });
+const doc=new jsPDF();
 
 // HEADER
 
-doc.setFontSize(18);
-doc.text(storeName.toUpperCase(),14,18);
-
+doc.setFontSize(16);
+doc.text(storeName,14,15);
 doc.setFontSize(10);
-if(storeAddress){
-doc.text(storeAddress,14,24,{maxWidth:120});
-}
+doc.text(address,14,22,{maxWidth:120});
+doc.text(`Contact: ${contact}`,14,28);
+doc.text(`GST: ${gst}`,14,34);
 
-let infoY = 30;
-
-if(storeContact){
-doc.text(`Contact: ${storeContact}`,14,infoY);
-infoY+=6;
-}
-
-if(gstNo){
-doc.text(`GST No: ${gstNo}`,14,infoY);
-}
-
-// LOGO BOX
-
-doc.rect(160,10,30,20);
-doc.text('LOGO',168,22);
-
-// INVOICE INFO
-
-doc.text(`Invoice No: ${invoiceNo}`,14,42);
+doc.text(`Invoice: ${invoice}`,14,42);
 doc.text(`Date: ${now.toLocaleString()}`,14,48);
 
-// CUSTOMER
-
-doc.text(`Customer: ${custName}`,14,58);
-doc.text(`Mobile: ${custMobile}`,14,64);
+doc.text(`Customer: ${cust}`,14,56);
+doc.text(`Mobile: ${mobile}`,14,62);
 
 // TABLE
 
 doc.autoTable({
-startY:72,
+startY:70,
 head:[['Item','Qty','Price','Total']],
-body:billItems,
-theme:'grid'
+body:billItems
 });
 
-const finalY = doc.lastAutoTable.finalY + 10;
+let y=doc.lastAutoTable.finalY+10;
 
-doc.text(`Grand Total: ₹ ${grandTotal.toFixed(2)}`,140,finalY);
+doc.text(`Sub Total: ₹ ${subTotal.toFixed(2)}`,140,y);
+y+=6;
 
-// SAVE
+if(igst) { doc.text(`IGST (${igst}%): Included`,140,y); y+=6; }
+if(cgst) { doc.text(`CGST (${cgst}%): Included`,140,y); y+=6; }
+if(sgst) { doc.text(`SGST (${sgst}%): Included`,140,y); y+=6; }
 
-doc.save(`Invoice_${invoiceNo}.pdf`);
+doc.text(`Grand Total: ₹ ${grandTotal.toFixed(2)}`,140,y+4);
+
+doc.save(`Invoice_${invoice}.pdf`);
 }
 
 
 // TESTS
 console.assert(Array.isArray(products),'Products error');
-console.assert(typeof grandTotal==='number','Total error');
 
 </script>
 </body>
