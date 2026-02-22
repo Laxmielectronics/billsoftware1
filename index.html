@@ -2,36 +2,51 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>GST Invoice Billing Software</title>
+<title>GST Billing Software</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
 <style>
 body{font-family:Arial;background:#f2f4f7;padding:20px}
-.container{max-width:1100px;margin:auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.1)}
-input,textarea,button{padding:8px;margin:5px;border-radius:6px;border:1px solid #ccc;width:100%;max-width:350px}
-button{background:#007bff;color:#fff;border:none;cursor:pointer;width:auto}
-table{width:100%;border-collapse:collapse;margin-top:15px}
-th,td{border:1px solid #ddd;padding:8px;text-align:center}
+.container{max-width:1200px;margin:auto;background:#fff;padding:20px;border-radius:10px}
+input,textarea,button{padding:8px;margin:5px;border-radius:6px;border:1px solid #ccc}
+button{background:#007bff;color:#fff;border:none;cursor:pointer}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ccc;padding:8px;text-align:center}
 th{background:#007bff;color:#fff}
-.total{font-size:15px;font-weight:bold;text-align:right;margin-top:5px}
-.action-btn{padding:4px 8px;margin:2px;font-size:12px}
+.action-btn{padding:4px 8px;font-size:12px;margin:2px}
+.total{font-weight:bold;text-align:right;margin-top:5px}
+.history-box{margin-top:30px}
 </style>
 </head>
 <body>
 
 <div class="container">
-<h2>GST Invoice Billing (GST Included in Rate)</h2>
+<h2>GST Invoice Billing Software</h2>
 
-<h3>State Details (For Auto GST Split)</h3>
-<input type="text" id="sellerState" placeholder="Seller State Name">
-<input type="text" id="buyerState" placeholder="Buyer State Name">
+<h3>Seller Details</h3>
+<input id="sellerName" placeholder="Store Name">
+<textarea id="sellerAddress" placeholder="Store Address"></textarea>
+<input id="sellerContact" placeholder="Shop Contact">
+<input id="sellerGST" placeholder="GSTIN">
+<input id="sellerState" placeholder="State Name">
 
-<h3>Add / Update Product</h3>
+<h3>Buyer Details</h3>
+<input id="buyerName" placeholder="Buyer Name">
+<textarea id="buyerAddress" placeholder="Buyer Address"></textarea>
+<input id="buyerContact" placeholder="Customer Contact">
+<input id="buyerGST" placeholder="Buyer GSTIN">
+<input id="buyerState" placeholder="Buyer State Name">
+
+<h3>Invoice</h3>
+<input id="invoiceNo" placeholder="Invoice Number (Optional)">
+<input type="date" id="invoiceDate">
+
+<h3>Add Product</h3>
 <input type="hidden" id="editIndex">
-<input type="text" id="itemName" placeholder="Item Name">
-<input type="text" id="hsn" placeholder="HSN/SAC Code">
+<input id="itemName" placeholder="Item Name">
+<input id="hsn" placeholder="HSN Code">
 <input type="number" id="qty" placeholder="Quantity">
 <input type="number" id="rate" placeholder="Rate (GST Included)">
 <input type="number" id="gstPercent" placeholder="GST %">
@@ -59,6 +74,23 @@ th{background:#007bff;color:#fff}
 <div class="total">Grand Total ₹ <span id="grand">0</span></div>
 
 <button onclick="downloadPDF()">Download GST Invoice PDF</button>
+<button onclick="saveInvoiceHistory()">Save Invoice</button>
+
+<div class="history-box">
+<h3>Invoice History</h3>
+<table id="historyTable">
+<thead>
+<tr>
+<th>Invoice No</th>
+<th>Date</th>
+<th>Customer</th>
+<th>Total</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
 
 </div>
 
@@ -66,47 +98,45 @@ th{background:#007bff;color:#fff}
 
 let items=[];
 let taxable=0, cgstTotal=0, sgstTotal=0, igstTotal=0, grandTotal=0;
+let invoiceHistory=JSON.parse(localStorage.getItem("invoiceHistory"))||[];
 
 function saveItem(){
 
-const name=document.getElementById('itemName').value;
-const hsn=document.getElementById('hsn').value;
-const qty=parseFloat(document.getElementById('qty').value);
-const rate=parseFloat(document.getElementById('rate').value);
-const gst=parseFloat(document.getElementById('gstPercent').value)||0;
-const editIndex=document.getElementById('editIndex').value;
+const name=itemName.value;
+const hsnCode=hsn.value;
+const quantity=parseFloat(qty.value);
+const rateValue=parseFloat(rate.value);
+const gst=parseFloat(gstPercent.value)||0;
+const editIndex=document.getElementById("editIndex").value;
 
-if(!name||isNaN(qty)||isNaN(rate)) return alert('Fill product details');
+if(!name||isNaN(quantity)||isNaN(rateValue)) return alert("Fill product details");
 
-// GST INCLUDED IN RATE
-const gross = qty * rate;  
-
+const gross = quantity * rateValue;
 let base = gross;
-let gstAmt = 0;
+let gstAmount = 0;
 
 if(gst > 0){
-    base = (gross * 100) / (100 + gst);
-    gstAmt = gross - base;
+base = (gross * 100) / (100 + gst);
+gstAmount = gross - base;
 }
 
-// STATE MATCH LOGIC
-const sellerState=document.getElementById('sellerState').value.trim().toLowerCase();
-const buyerState=document.getElementById('buyerState').value.trim().toLowerCase();
+const sellerState=sellerState.value.trim().toLowerCase();
+const buyerState=buyerState.value.trim().toLowerCase();
 
 let cg=0, sg=0, ig=0;
 
-if(sellerState && buyerState && sellerState !== buyerState){
-    ig = gstAmt;   
+if(sellerState && buyerState && sellerState!==buyerState){
+ig=gstAmount;
 }else{
-    cg = gstAmt/2; 
-    sg = gstAmt/2;
+cg=gstAmount/2;
+sg=gstAmount/2;
 }
 
-const total = gross;
+const total=gross;
 
-const product={name,hsn,qty,rate,gst,base,gstAmt,total,cg,sg,ig};
+const product={name,hsnCode,quantity,rate:rateValue,gst,base,gstAmount,total,cg,sg,ig};
 
-if(editIndex===''){
+if(editIndex===""){
 items.push(product);
 }else{
 items[editIndex]=product;
@@ -118,29 +148,29 @@ calculateTotals();
 }
 
 function renderTable(){
-const tbody=document.querySelector('#billTable tbody');
-tbody.innerHTML='';
+const tbody=document.querySelector("#billTable tbody");
+tbody.innerHTML="";
 
 items.forEach((item,index)=>{
 const row=tbody.insertRow();
 row.insertCell(0).innerText=item.name;
-row.insertCell(1).innerText=item.hsn;
-row.insertCell(2).innerText=item.qty;
+row.insertCell(1).innerText=item.hsnCode;
+row.insertCell(2).innerText=item.quantity;
 row.insertCell(3).innerText=item.rate;
-row.insertCell(4).innerText=item.gst+'%';
+row.insertCell(4).innerText=item.gst+"%";
 row.insertCell(5).innerText=item.total.toFixed(2);
 
 const action=row.insertCell(6);
 
-const editBtn=document.createElement('button');
-editBtn.innerText='Edit';
-editBtn.className='action-btn';
+const editBtn=document.createElement("button");
+editBtn.innerText="Edit";
+editBtn.className="action-btn";
 editBtn.onclick=()=>editItem(index);
 
-const deleteBtn=document.createElement('button');
-deleteBtn.innerText='Delete';
-deleteBtn.className='action-btn';
-deleteBtn.style.background='red';
+const deleteBtn=document.createElement("button");
+deleteBtn.innerText="Delete";
+deleteBtn.className="action-btn";
+deleteBtn.style.background="red";
 deleteBtn.onclick=()=>deleteItem(index);
 
 action.appendChild(editBtn);
@@ -148,78 +178,71 @@ action.appendChild(deleteBtn);
 });
 }
 
-function editItem(index){
-const item=items[index];
-document.getElementById('itemName').value=item.name;
-document.getElementById('hsn').value=item.hsn;
-document.getElementById('qty').value=item.qty;
-document.getElementById('rate').value=item.rate;
-document.getElementById('gstPercent').value=item.gst;
-document.getElementById('editIndex').value=index;
-}
-
-function deleteItem(index){
-if(confirm('Delete this product?')){
-items.splice(index,1);
-renderTable();
-calculateTotals();
-}
-}
-
-function clearForm(){
-document.getElementById('itemName').value='';
-document.getElementById('hsn').value='';
-document.getElementById('qty').value='';
-document.getElementById('rate').value='';
-document.getElementById('gstPercent').value='';
-document.getElementById('editIndex').value='';
-}
-
 function calculateTotals(){
 taxable=0; cgstTotal=0; sgstTotal=0; igstTotal=0;
 
 items.forEach(item=>{
-    taxable+=item.base;
-    cgstTotal+=item.cg;
-    sgstTotal+=item.sg;
-    igstTotal+=item.ig;
+taxable+=item.base;
+cgstTotal+=item.cg;
+sgstTotal+=item.sg;
+igstTotal+=item.ig;
 });
 
 grandTotal=taxable+cgstTotal+sgstTotal+igstTotal;
 
-document.getElementById('taxable').innerText=taxable.toFixed(2);
-document.getElementById('cgst').innerText=cgstTotal.toFixed(2);
-document.getElementById('sgst').innerText=sgstTotal.toFixed(2);
-document.getElementById('igst').innerText=igstTotal.toFixed(2);
-document.getElementById('grand').innerText=grandTotal.toFixed(2);
+document.getElementById("taxable").innerText=taxable.toFixed(2);
+document.getElementById("cgst").innerText=cgstTotal.toFixed(2);
+document.getElementById("sgst").innerText=sgstTotal.toFixed(2);
+document.getElementById("igst").innerText=igstTotal.toFixed(2);
+document.getElementById("grand").innerText=grandTotal.toFixed(2);
 }
 
-function downloadPDF(){
+function saveInvoiceHistory(){
+const invoiceData={
+invoiceNo:invoiceNo.value||"N/A",
+date:invoiceDate.value||new Date().toISOString().split("T")[0],
+customer:buyerName.value||"Walk-in",
+total:grandTotal.toFixed(2),
+items:items
+};
 
-const { jsPDF } = window.jspdf;
-const doc=new jsPDF();
+invoiceHistory.push(invoiceData);
+localStorage.setItem("invoiceHistory",JSON.stringify(invoiceHistory));
+renderHistory();
+alert("Invoice Saved Successfully!");
+}
 
-doc.autoTable({
-head:[['Description','HSN','Qty','Rate','GST %','Amount']],
-body:items.map(i=>[i.name,i.hsn,i.qty,i.rate,i.gst+'%',i.total.toFixed(2)]),
-theme:'grid'
+function renderHistory(){
+const tbody=document.querySelector("#historyTable tbody");
+tbody.innerHTML="";
+
+invoiceHistory.forEach((inv,index)=>{
+const row=tbody.insertRow();
+row.insertCell(0).innerText=inv.invoiceNo;
+row.insertCell(1).innerText=inv.date;
+row.insertCell(2).innerText=inv.customer;
+row.insertCell(3).innerText=inv.total;
+
+const action=row.insertCell(4);
+const delBtn=document.createElement("button");
+delBtn.innerText="Delete";
+delBtn.className="action-btn";
+delBtn.style.background="red";
+delBtn.onclick=()=>deleteInvoice(index);
+
+action.appendChild(delBtn);
 });
-
-let y=doc.lastAutoTable.finalY+10;
-
-doc.text('Taxable Value: ₹ '+taxable.toFixed(2),140,y);
-y+=6;
-doc.text('CGST: ₹ '+cgstTotal.toFixed(2),140,y);
-y+=6;
-doc.text('SGST: ₹ '+sgstTotal.toFixed(2),140,y);
-y+=6;
-doc.text('IGST: ₹ '+igstTotal.toFixed(2),140,y);
-y+=6;
-doc.setFontSize(12);
-doc.text('Grand Total: ₹ '+grandTotal.toFixed(2),140,y);
-
-doc.save('GST_Invoice.pdf');
 }
+
+function deleteInvoice(index){
+if(confirm("Delete this invoice?")){
+invoiceHistory.splice(index,1);
+localStorage.setItem("invoiceHistory",JSON.stringify(invoiceHistory));
+renderHistory();
+}
+}
+
+renderHistory();
 
 </script>
 </body>
